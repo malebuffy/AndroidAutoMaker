@@ -1,0 +1,15 @@
+{
+  "name": "android-auto-maker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "adm-zip": "^0.6.1",
+    "express": "^4.21.2",
+    "multer": "^2.4.0"
+  }
+}
