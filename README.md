@@ -121,3 +121,7 @@ npm test
 
 ## This app is PCWAI (Proudly Coded With AI) 
 ...Or SI....how Donald likes to call it. :)
+
+## License
+
+Android Auto Maker is free software under the GNU General Public License version 3. The full terms are in [LICENSE](LICENSE).
