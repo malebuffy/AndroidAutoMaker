@@ -114,3 +114,6 @@ Android Auto Maker is an independent project. It is not affiliated with, endorse
 ## License
 
 Android Auto Maker is free software under the GNU General Public License version 3. The full terms are in [LICENSE](LICENSE).
+
+## This app is PCWAI (Proudly Coded With AI) 
+...Or SI....how Donald likes to call it. :)
