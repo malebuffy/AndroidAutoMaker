@@ -36,8 +36,10 @@ You need:
 
 - Node.js 18 or newer
 - JDK 17 (JDK 11 or newer also starts the tools; JDK 17 is the version this project is built with)
-- The files already in `tools`: `apktool.jar`, `apksigner.jar`, and `zipalign.exe`
+- Android SDK build-tools. Copy `zipalign.exe` and `apksigner.jar` from a `build-tools` folder into `tools`. Those two files are part of the Android SDK and are not included here.
 - Android platform-tools, only if you want **Install on phone**
+
+`tools/apktool.jar` is included. Apktool is published under the Apache License 2.0, and parts of it use the BSD license. `tools/lib/ARSCLib-1.3.8.jar` is included. ARSCLib is published under the Apache License 2.0.
 
 From the project folder:
 
@@ -59,7 +61,7 @@ npm start
 
 **Install on phone** looks for `adb.exe` in `%ANDROID_HOME%\platform-tools`, `%ANDROID_SDK_ROOT%\platform-tools`, or `%LOCALAPPDATA%\Android\Sdk\platform-tools`. Install [Android SDK platform-tools](https://developer.android.com/tools/releases/platform-tools) if that file is not there. On the phone, turn on USB debugging and accept the computer when Android asks.
 
-A missing `apktool.jar`, `apksigner.jar`, or `zipalign.exe` is reported in the server window. Put those files back in `tools` before preparing a package.
+A missing `apktool.jar`, `apksigner.jar`, or `zipalign.exe` is reported in the server window. Copy `zipalign.exe` and `apksigner.jar` from the Android SDK `build-tools` folder into `tools` before preparing a package.
 
 ## Use the Android app
 
@@ -104,23 +106,6 @@ The APK is written to:
 `android/app/build/outputs/apk/release/app-release.apk`
 
 Copy that file to the phone and install it. If a previous Android Auto Maker build was signed with a different key, uninstall that copy first. A debug build and this release build do not replace each other.
-
-Run the unit tests before a release when you have changed the project:
-
-```powershell
-cd android
-.\gradlew.bat :app:testDebugUnitTest
-.\gradlew.bat :app:assembleRelease
-```
-
-Website checks, from the project folder:
-
-```powershell
-npm test
-```
-
-## This app is PCWAI (Proudly Coded With AI) 
-...Or SI....how Donald likes to call it. :)
 
 ## License
 

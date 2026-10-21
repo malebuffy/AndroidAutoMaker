@@ -1,6 +1,10 @@
 node_modules/
 work/
+tests/
 tools/framework/
+tools/zipalign.exe
+tools/apksigner.jar
+tools/car-lib/
 tools/debug.keystore
 tools/build-nav/
 tools/merge/
