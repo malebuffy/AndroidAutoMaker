@@ -113,10 +113,6 @@ class MainActivity : AppCompatActivity() {
         }
         binding.convert.setOnClickListener { beginConvert() }
         picker.kind = "game"
-        // binding.kind.setOnCheckedChangeListener { _, checkedId ->
-        //     picker.kind = if (checkedId == R.id.kind_navigation) "navigation" else "game"
-        // }
-        // if (picker.kind == "navigation") binding.kindNavigation.isChecked = true
         showSelection()
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {

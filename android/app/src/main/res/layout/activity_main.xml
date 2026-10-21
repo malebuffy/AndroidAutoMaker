@@ -125,14 +125,6 @@
                             android:layout_height="wrap_content"
                             android:checked="true"
                             android:text="@string/kind_game" />
-
-                        <!--
-                        <RadioButton
-                            android:id="@+id/kind_navigation"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="@string/kind_navigation" />
-                        -->
                     </RadioGroup>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

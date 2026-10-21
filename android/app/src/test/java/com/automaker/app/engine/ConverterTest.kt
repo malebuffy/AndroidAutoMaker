@@ -112,38 +112,6 @@ class ConverterTest {
         assertTrue(activityTag(manifest, "com.example.plainapp.MainActivity").contains("android:exported=\"true\""))
         assertTrue(activityTag(manifest, "com.example.plainapp.Other").contains("android:exported=\"false\""))
 
-        val navigation = File(directory, "out/navigation.apk")
-        val navigationDex = File(project, "tools/navigation.dex").readBytes()
-        val lifecycleDex = File(project, "tools/lifecycle.dex").readBytes()
-        converter.convertApk(sample, navigation, {}, {}, kind = "navigation", navigationDex = navigationDex, lifecycleDex = lifecycleDex)
-        val navigationDecoded = File(directory, "navigation-decoded")
-        run(
-            java.absolutePath,
-            listOf(
-                "-jar", apktool.absolutePath,
-                "d", "-f", "-s",
-                "-p", framework.absolutePath,
-                "-o", navigationDecoded.absolutePath,
-                navigation.absolutePath,
-            ),
-        )
-        val navigationManifest = File(navigationDecoded, "AndroidManifest.xml").readText()
-        val navigationXml = File(navigationDecoded, "res/xml/automotive_app_desc.xml").readText()
-        assertTrue(navigationManifest.contains("android.intent.category.CAR_LAUNCHER"))
-        assertTrue(navigationManifest.contains("androidx.car.app.category.NAVIGATION"))
-        assertTrue(navigationManifest.contains("com.automaker.nav.NavigationCarService"))
-        assertTrue(navigation.readBytes().toString(Charsets.ISO_8859_1).contains("Lcom/automaker/nav/NavigationCarService;"))
-        assertTrue(navigationManifest.contains("androidx.car.app.NAVIGATION_TEMPLATES"))
-        assertTrue(navigationManifest.contains("androidx.car.app.minCarApiLevel"))
-        assertTrue(navigationManifest.contains("com.google.android.gms.car.application"))
-        assertTrue(navigationManifest.contains("android.hardware.gamepad"))
-        assertFalse(navigationManifest.contains("android.app.Activity"))
-        assertFalse(navigationManifest.contains("android:appCategory=\"game\""))
-        assertFalse(navigationManifest.contains("android:isGame=\"true\""))
-        for (name in listOf("media", "template", "service", "projection")) {
-            assertTrue(navigationXml.contains("name=\"$name\""))
-        }
-
         val again = converter.convertApk(output, File(directory, "out/again.apk"), {}, {})
         assertTrue(again.changes.any { it.contains("Prepared as a parked game") })
 

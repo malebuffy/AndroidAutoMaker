@@ -28,7 +28,6 @@ function publicJob(job) {
       state: stepState(job, step.id),
     })),
     kind: "game",
-    // kind: job.kind === "navigation" ? "navigation" : "game",
     log: [],
     error: job.error,
     changes: job.changes,
@@ -86,7 +85,7 @@ const upload = multer({
   },
 });
 
-function startJob(id, originalName, kind) {
+function startJob(id, originalName) {
   const directory = path.join(paths.work, id);
   const xapk = (originalName || "").toLowerCase().endsWith(".xapk");
   const inputPath = path.join(directory, xapk ? "input.xapk" : "input.apk");
@@ -113,7 +112,6 @@ function startJob(id, originalName, kind) {
     originalName: path.basename(originalName || "app.apk"),
     format: "apk",
     kind: "game",
-    // kind: kind === "navigation" ? "navigation" : "game",
     size: 0,
     createdAt: Date.now(),
     outputPath: path.join(directory, "signed.apk"),
@@ -125,7 +123,6 @@ function startJob(id, originalName, kind) {
     inputPath,
     outputPath: job.outputPath,
     log: job.log,
-    kind: job.kind,
     onStep(step) {
       job.step = step;
     },
@@ -181,7 +178,7 @@ app.post("/api/jobs", (req, res) => {
       return;
     }
     try {
-      const job = startJob(req.jobId, req.file.originalname, req.body?.kind);
+      const job = startJob(req.jobId, req.file.originalname);
       res.status(202).json(publicJob(job));
     } catch (startError) {
       res.status(startError.status || 500).json({ error: startError.message });

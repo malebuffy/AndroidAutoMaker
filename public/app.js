@@ -181,7 +181,6 @@ convertButton.addEventListener("click", async () => {
   const body = new FormData();
   body.append("apk", selectedFile, selectedFile.name);
   body.append("kind", "game");
-  // body.append("kind", document.querySelector('input[name="kind"]:checked')?.value || "game");
   try {
     const response = await fetch("/api/jobs", { method: "POST", body });
     const payload = await response.json();

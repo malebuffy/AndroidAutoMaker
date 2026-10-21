@@ -77,14 +77,6 @@ class SessionRepository(private val context: Context) {
         PackageConverter(PackageConverter.signerFrom(keystore))
     }
 
-    private fun navigationDex(): ByteArray = assetBytes("navigation.dex")
-
-    private fun lifecycleDex(): ByteArray = assetBytes("lifecycle.dex")
-
-    private fun assetBytes(name: String): ByteArray {
-        return context.assets.open(name).use { it.readBytes() }
-    }
-
     fun restore() {
         val root = sessionsDir()
         for (dir in root.listFiles().orEmpty()) {
@@ -118,7 +110,6 @@ class SessionRepository(private val context: Context) {
         val storedInput = File(directory, if (xapk) "input.xapk" else "input.apk")
         input.copyTo(storedInput, overwrite = true)
         input.delete()
-        // val selected = if (kind == "navigation") "navigation" else "game"
         val selected = "game"
         val job = Job(
             id = id,
@@ -193,7 +184,7 @@ class SessionRepository(private val context: Context) {
                         job.step = step
                         writeJob(job)
                         publish()
-                    }, { job.cancelled }, job.kind, navigationDex(), lifecycleDex())
+                    }, { job.cancelled })
                 } else {
                     converter.convertApk(input, job.output, { line ->
                         job.log.add(line)
@@ -203,7 +194,7 @@ class SessionRepository(private val context: Context) {
                         job.step = step
                         writeJob(job)
                         publish()
-                    }, { job.cancelled }, job.kind, navigationDex(), lifecycleDex())
+                    }, { job.cancelled })
                 }
                 result
             }

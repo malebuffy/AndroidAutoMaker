@@ -8,10 +8,6 @@ import com.reandroid.app.AndroidManifest
 import com.reandroid.arsc.chunk.xml.AndroidManifestBlock
 import com.reandroid.arsc.chunk.xml.ResXmlElement
 import java.io.File
-import java.util.zip.CRC32
-import java.util.zip.ZipEntry
-import java.util.zip.ZipFile
-import java.util.zip.ZipOutputStream
 import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
@@ -38,9 +34,6 @@ class PackageConverter(private val signer: ApkSigner.SignerConfig) {
         log: (String) -> Unit,
         onStep: (String) -> Unit,
         cancelled: () -> Boolean = { false },
-        kind: String = "game",
-        navigationDex: ByteArray? = null,
-        lifecycleDex: ByteArray? = null,
     ): ConvertedPackage {
         checkCancelled(cancelled)
         val directory = output.parentFile ?: throw IllegalStateException("The session folder is missing.")
@@ -54,7 +47,7 @@ class PackageConverter(private val signer: ApkSigner.SignerConfig) {
             val manifest = apk.androidManifest
                 ?: throw IllegalStateException("The decoded APK has no AndroidManifest.xml.")
             onStep("patch")
-            val changes = ManifestPatcher.patch(manifest, apk, kind)
+            val changes = ManifestPatcher.patch(manifest)
             changes.forEach(log)
             checkCancelled(cancelled)
             onStep("build")
@@ -63,16 +56,6 @@ class PackageConverter(private val signer: ApkSigner.SignerConfig) {
             stripSignatures(apk)
             if (unsigned.exists()) unsigned.delete()
             apk.writeApk(unsigned)
-            if (kind == "navigation") {
-                val serviceBytes = navigationDex
-                val lifecycleBytes = lifecycleDex
-                if (serviceBytes != null && !zipContains(unsigned, "Lcom/automaker/nav/NavigationCarService;")) {
-                    addStoredDex(unsigned, serviceBytes)
-                }
-                if (lifecycleBytes != null && !zipContains(unsigned, "Landroidx/lifecycle/LifecycleRegistry;")) {
-                    addStoredDex(unsigned, lifecycleBytes)
-                }
-            }
             val packageName = manifest.packageName.orEmpty()
             checkCancelled(cancelled)
             onStep("sign")
@@ -90,9 +73,6 @@ class PackageConverter(private val signer: ApkSigner.SignerConfig) {
         log: (String) -> Unit,
         onStep: (String) -> Unit,
         cancelled: () -> Boolean = { false },
-        kind: String = "game",
-        navigationDex: ByteArray? = null,
-        lifecycleDex: ByteArray? = null,
     ): ConvertedPackage {
         checkCancelled(cancelled)
         val directory = output.parentFile ?: throw IllegalStateException("The session folder is missing.")
@@ -122,7 +102,7 @@ class PackageConverter(private val signer: ApkSigner.SignerConfig) {
         }
         extracted.deleteRecursively()
         modules.deleteRecursively()
-        val patched = convertApk(merged, output, log, onStep, cancelled, kind, navigationDex, lifecycleDex)
+        val patched = convertApk(merged, output, log, onStep, cancelled)
         merged.delete()
         return patched.copy(format = "apk")
     }
@@ -205,74 +185,6 @@ class PackageConverter(private val signer: ApkSigner.SignerConfig) {
         } finally {
             if (aligned.exists()) aligned.delete()
         }
-    }
-
-    private fun zipContains(apkFile: File, marker: String): Boolean {
-        val needle = marker.encodeToByteArray()
-        ZipFile(apkFile).use { zip ->
-            return zip.entries().toList().any { entry ->
-                entry.name.matches(Regex("""classes\d*\.dex""")) &&
-                    zip.getInputStream(entry).use { containsSequence(it.readBytes(), needle) }
-            }
-        }
-    }
-
-    private fun addStoredDex(apkFile: File, dex: ByteArray) {
-        ZipFile(apkFile).use { zip ->
-            val entries = zip.entries().toList()
-            val names = entries.map { it.name }.toSet()
-            var index = 2
-            while ("classes$index.dex" in names) index += 1
-            val temp = File(apkFile.parentFile, "${apkFile.name}.dexed")
-            ZipOutputStream(temp.outputStream()).use { out ->
-                for (entry in entries) {
-                    val next = ZipEntry(entry.name)
-                    next.time = entry.time
-                    if (entry.method == ZipEntry.STORED) {
-                        next.method = ZipEntry.STORED
-                        next.size = entry.size
-                        next.compressedSize = entry.size
-                        next.crc = entry.crc
-                    }
-                    out.putNextEntry(next)
-                    zip.getInputStream(entry).use { it.copyTo(out) }
-                    out.closeEntry()
-                }
-                val crc = CRC32()
-                crc.update(dex)
-                val added = ZipEntry("classes$index.dex")
-                added.method = ZipEntry.STORED
-                added.size = dex.size.toLong()
-                added.compressedSize = dex.size.toLong()
-                added.crc = crc.value
-                out.putNextEntry(added)
-                out.write(dex)
-                out.closeEntry()
-            }
-        }
-        val temp = File(apkFile.parentFile, "${apkFile.name}.dexed")
-        if (temp.exists()) {
-            if (!apkFile.delete() || !temp.renameTo(apkFile)) {
-                temp.copyTo(apkFile, overwrite = true)
-                temp.delete()
-            }
-        }
-    }
-
-    private fun containsSequence(bytes: ByteArray, needle: ByteArray): Boolean {
-        if (needle.isEmpty() || bytes.size < needle.size) return false
-        val last = bytes.size - needle.size
-        for (start in 0..last) {
-            var matches = true
-            for (offset in needle.indices) {
-                if (bytes[start + offset] != needle[offset]) {
-                    matches = false
-                    break
-                }
-            }
-            if (matches) return true
-        }
-        return false
     }
 
     private fun stripSignatures(apk: ApkModule) {

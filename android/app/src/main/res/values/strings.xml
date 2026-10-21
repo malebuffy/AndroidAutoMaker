@@ -9,7 +9,6 @@
     <string name="changes_title">Before you install</string>
     <string name="kind_title">Choose one</string>
     <string name="kind_game">Parked game\nAvailable while the car is parked.</string>
-    <string name="kind_navigation">Navigation\nAvailable as a navigation app.</string>
     <string name="change_game_title">Parked game.</string>
     <string name="change_game_body">Available while the car is parked.</string>
     <string name="change_phone_title">Uninstall the original app first.</string>
