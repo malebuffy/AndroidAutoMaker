@@ -107,6 +107,10 @@ The APK is written to:
 
 Copy that file to the phone and install it. If a previous Android Auto Maker build was signed with a different key, uninstall that copy first. A debug build and this release build do not replace each other.
 
+## Notice
+
+Android Auto Maker is an independent project. It is not affiliated with, endorsed by, or sponsored by Google LLC. Android, Android Auto, and Google Play are trademarks of Google LLC.
+
 ## License
 
 Android Auto Maker is free software under the GNU General Public License version 3. The full terms are in [LICENSE](LICENSE).
