@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Android Auto Maker</string>
+    <string name="intro_title">Show an app on Android Auto</string>
+    <string name="intro_body">Choose an APK or XAPK, then save or install the result.</string>
+    <string name="choose_file">Choose an APK or XAPK</string>
+    <string name="clear_file">Remove file</string>
+    <string name="convert">Create Android Auto package</string>
+    <string name="changes_title">Before you install</string>
+    <string name="kind_title">Choose one</string>
+    <string name="kind_game">Parked game\nAvailable while the car is parked.</string>
+    <string name="kind_navigation">Navigation\nAvailable as a navigation app.</string>
+    <string name="change_game_title">Parked game.</string>
+    <string name="change_game_body">Available while the car is parked.</string>
+    <string name="change_phone_title">Uninstall the original app first.</string>
+    <string name="parked_note">A parked game needs a phone on Android 15 or newer.</string>
+    <string name="install_note">Uninstall the original app first.</string>
+    <string name="install_now">Install</string>
+    <string name="install_opened">Complete the installer on the phone.</string>
+    <string name="install_done">Installed on the phone.</string>
+    <string name="install_waiting">Installing</string>
+    <string name="install_missing">The app was not installed.</string>
+    <string name="install_cancelled">Installation was cancelled. You can still save the APK.</string>
+    <string name="sessions_title">Sessions</string>
+</resources>

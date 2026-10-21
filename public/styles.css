@@ -399,6 +399,44 @@ code {
 
 .install-note { margin: 16px 4px 0; }
 
+.kind {
+  margin: 16px 0 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.kind legend {
+  padding: 0;
+  margin-bottom: 4px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.choice {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px;
+  border: 1px solid var(--outline-variant);
+  border-radius: 12px;
+  background: var(--surface-lowest);
+  cursor: pointer;
+}
+
+.choice:has(input:checked) {
+  border-color: var(--primary);
+  background: var(--primary-container);
+}
+
+.choice input {
+  margin-top: 4px;
+  accent-color: var(--primary);
+}
+
+.choice .support { display: block; }
+
 footer {
   padding: 8px 0 28px;
   color: var(--on-surface-variant);

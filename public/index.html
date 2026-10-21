@@ -6,7 +6,7 @@
     <title>Android Auto Maker</title>
     <meta
       name="description"
-      content="Declare an APK or XAPK as a parked Android Auto game, rebuild it, and download the signed package."
+      content="Turn an APK or XAPK into a package for Android Auto."
     />
     <meta name="theme-color" content="#006a61" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
@@ -30,24 +30,21 @@
           </svg>
         </span>
         <span class="brand">Android Auto Maker</span>
-        <span class="badge">On this computer</span>
+        <span class="badge">Shared on this network</span>
       </div>
     </header>
 
     <main>
       <div class="intro">
-        <h1>Show an app on Android Auto while parked</h1>
-        <p>
-          Upload an APK or XAPK that was not built for the car. This tool decodes it, declares it
-          as a game, adds the Android Auto launcher, rebuilds it, and signs a file you can install.
-        </p>
+        <h1>Show an app on Android Auto</h1>
+        <p>Upload an APK or XAPK, then download or install the result.</p>
       </div>
 
       <div class="layout">
         <section class="card" aria-labelledby="upload-title">
           <h2 id="upload-title">APK or XAPK</h2>
           <label id="dropzone" class="dropzone" for="file">
-            <input id="file" type="file" accept=".apk,.xapk,application/vnd.android.package-archive" />
+            <input id="file" type="file" />
             <span class="drop-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="36" height="36">
                 <path
@@ -81,68 +78,30 @@
               </svg>
             </button>
           </div>
+          <fieldset class="kind">
+            <legend>Choose one</legend>
+            <label class="choice">
+              <input type="radio" name="kind" value="game" checked />
+              <span>
+                <strong>Parked game</strong>
+                <span class="support">Available while the car is parked.</span>
+              </span>
+            </label>
+            <!--
+            <label class="choice">
+              <input type="radio" name="kind" value="navigation" />
+              <span>
+                <strong>Navigation</strong>
+                <span class="support">Available as a navigation app.</span>
+              </span>
+            </label>
+            -->
+          </fieldset>
         </section>
 
         <section class="card" aria-labelledby="changes-title">
-          <h2 id="changes-title">What changes in the manifest</h2>
-          <ol class="change-list">
-            <li>
-              <span class="change-mark" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="22" height="22">
-                  <path
-                    fill="currentColor"
-                    d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4-3c-.83 0-1.5-.67-1.5-1.5S18.67 9 19.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"
-                  />
-                </svg>
-              </span>
-              <span>
-                <strong>Declared as a game.</strong>
-                <span class="support">
-                  <code>android:appCategory="game"</code> tells Android Auto this app may show its
-                  own screen while the car is parked.
-                </span>
-              </span>
-            </li>
-            <li>
-              <span class="change-mark" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="22" height="22">
-                  <path
-                    fill="currentColor"
-                    d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"
-                  />
-                </svg>
-              </span>
-              <span>
-                <strong>Added to the car launcher.</strong>
-                <span class="support">
-                  The main activity gets <code>android.intent.category.CAR_LAUNCHER</code>, which
-                  is how Android Auto opens it.
-                </span>
-              </span>
-            </li>
-            <li>
-              <span class="change-mark" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="22" height="22">
-                  <path
-                    fill="currentColor"
-                    d="M17 1.01 7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"
-                  />
-                </svg>
-              </span>
-              <span>
-                <strong>Still installable on a phone.</strong>
-                <span class="support">
-                  Car hardware is declared optional. Every APK in an XAPK is then signed with the
-                  same new key and packed back into an XAPK.
-                </span>
-              </span>
-            </li>
-          </ol>
-          <p class="note">
-            Android Auto shows the app while the car is parked and hides it while the car is
-            moving. The phone needs Android 15 or newer. Flags that would mark the app as safe to
-            use while driving are removed, so the car keeps it in the parked category.
-          </p>
+          <h2 id="changes-title">Before you install</h2>
+          <p class="note">Uninstall the original app first. A parked game needs a phone on Android 15 or newer.</p>
         </section>
       </div>
 
@@ -160,16 +119,11 @@
         <ul id="change-result" class="result-list" hidden></ul>
         <div class="status-actions">
           <a id="download" class="btn-filled" hidden>Download APK</a>
-          <button id="toggle-log" class="btn-text" type="button" aria-expanded="false">Show log</button>
+          <button id="install" class="btn-text" type="button" hidden>Install on phone</button>
         </div>
-        <pre id="log" class="log" hidden></pre>
       </section>
 
-      <p class="install-note">
-        Uninstall the original app before installing the download. The new signature replaces the
-        Play Store signature, so store updates will not install over this file. Install an XAPK
-        the same way you installed the original bundle.
-      </p>
+      <p class="install-note">Uninstall the original app first.</p>
     </main>
 
     <footer>

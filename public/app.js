@@ -12,16 +12,15 @@ const progressBar = document.querySelector("#progress-bar");
 const steps = document.querySelector("#steps");
 const changeResult = document.querySelector("#change-result");
 const downloadLink = document.querySelector("#download");
-const toggleLog = document.querySelector("#toggle-log");
-const log = document.querySelector("#log");
+const installButton = document.querySelector("#install");
 const tools = document.querySelector("#tools");
 const snackbar = document.querySelector("#snackbar");
 
 const STEP_FALLBACK = [
-  { id: "decode", label: "Decode the APK" },
-  { id: "patch", label: "Declare it as a parked game" },
-  { id: "build", label: "Rebuild the APK" },
-  { id: "sign", label: "Align and sign" },
+  { id: "decode", label: "Prepare" },
+  { id: "patch", label: "Update" },
+  { id: "build", label: "Build" },
+  { id: "sign", label: "Finish" },
 ];
 
 let selectedFile = null;
@@ -46,10 +45,6 @@ function setFile(file) {
   const lowerName = file.name.toLowerCase();
   if (!lowerName.endsWith(".apk") && !lowerName.endsWith(".xapk")) {
     showSnack("Choose an .apk or .xapk file.");
-    return;
-  }
-  if (file.size > 512 * 1024 * 1024) {
-    showSnack("Files larger than 512 MB are not accepted.");
     return;
   }
   selectedFile = file;
@@ -90,13 +85,6 @@ dropzone.addEventListener("drop", (event) => {
   setFile(event.dataTransfer.files[0]);
 });
 
-toggleLog.addEventListener("click", () => {
-  const open = log.hidden;
-  log.hidden = !open;
-  toggleLog.textContent = open ? "Hide log" : "Show log";
-  toggleLog.setAttribute("aria-expanded", String(open));
-});
-
 function marker(state, index) {
   if (state === "done") return "✓";
   if (state === "error") return "!";
@@ -118,7 +106,8 @@ function renderJob(job) {
   });
 
   progressBar.className = "progress-bar";
-  if (job.status === "running") progressBar.classList.add("indeterminate");
+  const busy = job.status === "running" || job.status === "queued";
+  if (busy) progressBar.classList.add("indeterminate");
   if (job.status === "done") progressBar.classList.add("done");
   if (job.status === "error") progressBar.classList.add("failed");
 
@@ -132,7 +121,7 @@ function renderJob(job) {
     statusCopy.textContent = details.join(" · ");
   } else {
     statusTitle.textContent = "Could not convert this package";
-    statusCopy.textContent = job.error || "The rebuild failed.";
+    statusCopy.textContent = "This package could not be converted.";
   }
 
   changeResult.hidden = !(job.changes && job.changes.length);
@@ -143,17 +132,20 @@ function renderJob(job) {
     changeResult.append(item);
   });
 
-  log.textContent = (job.log || []).join("\n\n");
   if (job.status === "done") {
     downloadLink.hidden = false;
     downloadLink.href = `/api/jobs/${job.id}/download`;
     downloadLink.download = job.downloadName || "android-auto.apk";
     downloadLink.textContent = `Download ${job.downloadName || "package"}`;
+    installButton.hidden = false;
+    installButton.disabled = false;
+    installButton.dataset.jobId = job.id;
   } else {
     downloadLink.hidden = true;
+    installButton.hidden = true;
   }
 
-  convertButton.disabled = job.status === "running" || !selectedFile;
+  convertButton.disabled = busy || !selectedFile;
   convertButton.textContent = job.status === "running" ? "Working…" : "Create Android Auto package";
 }
 
@@ -165,12 +157,12 @@ async function poll(id) {
   }
   const job = await response.json();
   renderJob(job);
-  if (job.status === "running") {
+  if (job.status === "running" || job.status === "queued") {
     pollTimer = window.setTimeout(() => poll(id), 800);
     return;
   }
   sessionStorage.removeItem("autoMakerJob");
-  if (job.status === "error") showSnack("The package could not be converted. The log has the tool output.");
+  if (job.status === "error") showSnack("This package could not be converted.");
 }
 
 convertButton.addEventListener("click", async () => {
@@ -184,9 +176,12 @@ convertButton.addEventListener("click", async () => {
   progressBar.className = "progress-bar indeterminate";
   changeResult.hidden = true;
   downloadLink.hidden = true;
+  installButton.hidden = true;
 
   const body = new FormData();
   body.append("apk", selectedFile, selectedFile.name);
+  body.append("kind", "game");
+  // body.append("kind", document.querySelector('input[name="kind"]:checked')?.value || "game");
   try {
     const response = await fetch("/api/jobs", { method: "POST", body });
     const payload = await response.json();
@@ -206,12 +201,38 @@ convertButton.addEventListener("click", async () => {
   }
 });
 
+installButton.addEventListener("click", async () => {
+  const id = installButton.dataset.jobId;
+  if (!id || installButton.disabled) return;
+  installButton.disabled = true;
+  statusTitle.textContent = "Installing";
+  progressBar.className = "progress-bar indeterminate";
+  try {
+    const response = await fetch(`/api/jobs/${id}/install`, { method: "POST" });
+    const payload = await response.json();
+    if (response.ok && payload.installed) {
+      statusTitle.textContent = "Installed";
+      statusCopy.textContent = "Installed on the phone.";
+      progressBar.className = "progress-bar done";
+      showSnack(payload.message);
+    } else {
+      statusTitle.textContent = "Ready to install";
+      progressBar.className = "progress-bar done";
+      showSnack(payload.error || payload.message || "The app was not installed.");
+    }
+  } catch (error) {
+    statusTitle.textContent = "Ready to install";
+    progressBar.className = "progress-bar done";
+    showSnack("The server could not be reached.");
+  } finally {
+    installButton.disabled = false;
+  }
+});
+
 fetch("/api/health")
   .then((response) => response.json())
   .then((health) => {
-    tools.textContent = health.ok
-      ? `Java ${health.java} · apktool ${health.apktool} · apksigner · zipalign`
-      : health.error || "Tools are not ready.";
+    tools.textContent = health.ok ? "Ready" : "Not ready";
   })
   .catch(() => {
     tools.textContent = "Tools could not be checked.";

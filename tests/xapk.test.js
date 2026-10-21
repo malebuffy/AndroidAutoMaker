@@ -4,7 +4,7 @@ import { execFile } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { assertSafeEntry, chooseBaseApk, extractZip, packZip, runXapkPipeline } from "../lib/xapk.js";
+import { assertSafeEntry, chooseBaseApk, extractZip, listBundle, packZip, runXapkPipeline } from "../lib/xapk.js";
 import { ensureKeystore, findJava, paths } from "../lib/tools.js";
 
 test("picks the base APK listed in an XAPK manifest", () => {
@@ -25,6 +25,21 @@ test("picks the base APK listed in an XAPK manifest", () => {
   );
   const base = chooseBaseApk(root);
   assert.equal(path.basename(base), "com.example.plainapp.apk");
+});
+
+test("lists the base APK before splits and keeps the obb", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "xapk-bundle-"));
+  const obbDir = path.join(root, "Android", "obb", "com.example.plainapp");
+  fs.mkdirSync(obbDir, { recursive: true });
+  fs.writeFileSync(path.join(root, "config.arm64_v8a.apk"), "split");
+  fs.writeFileSync(path.join(root, "com.example.plainapp.apk"), "base");
+  fs.writeFileSync(path.join(obbDir, "main.1.com.example.plainapp.obb"), "obb");
+  fs.writeFileSync(path.join(root, "manifest.json"), JSON.stringify({ package_name: "com.example.plainapp" }));
+  const bundle = listBundle(root);
+  assert.deepEqual(bundle.apks.map((file) => path.basename(file)), ["com.example.plainapp.apk", "config.arm64_v8a.apk"]);
+  assert.equal(bundle.obbs.length, 1);
+  assert.equal(bundle.obbs[0].packageName, "com.example.plainapp");
+  assert.equal(bundle.obbs[0].name, "main.1.com.example.plainapp.obb");
 });
 
 test("skips Unity asset packs and ABI splits when the XAPK has no manifest", () => {
@@ -118,7 +133,7 @@ async function buildSample(directory, java) {
   return signed;
 }
 
-test("patches an XAPK base APK and re-signs its splits", { timeout: 180000 }, async () => {
+test("merges an XAPK into one signed APK", { timeout: 180000 }, async () => {
   assert.ok(fs.existsSync(AAPT2), "aapt2 is required to build the sample APK");
   const { java } = findJava();
   ensureKeystore();
@@ -143,20 +158,12 @@ test("patches an XAPK base APK and re-signs its splits", { timeout: 180000 }, as
   );
   const input = path.join(directory, "plain.xapk");
   packZip(bundle, input);
-  const output = path.join(directory, "out", "signed.xapk");
+  const output = path.join(directory, "out", "signed.apk");
   fs.mkdirSync(path.dirname(output), { recursive: true });
   const result = await runXapkPipeline({ inputPath: input, outputPath: output, log: [] });
-  assert.equal(result.format, "xapk");
+  assert.equal(result.format, "apk");
   assert.equal(result.packageName, "com.example.plainapp");
   assert.ok(result.changes.some((change) => /game/i.test(change)));
-  assert.ok(result.changes.some((change) => /split/i.test(change)));
-
-  const unpacked = path.join(directory, "unpacked");
-  extractZip(output, unpacked);
-  assert.equal(fs.readFileSync(path.join(unpacked, "Android", "obb", "com.example.plainapp", "main.obb"), "utf8"), "expansion");
-  const manifest = JSON.parse(fs.readFileSync(path.join(unpacked, "manifest.json"), "utf8"));
-  assert.equal(manifest.split_apks[0].id, "base");
-  assert.ok(manifest.total_size > 0);
 
   const decoded = path.join(directory, "check");
   await exec(java, [
@@ -169,11 +176,11 @@ test("patches an XAPK base APK and re-signs its splits", { timeout: 180000 }, as
     paths.framework,
     "-o",
     decoded,
-    path.join(unpacked, "com.example.plainapp.apk"),
+    output,
   ]);
   const patched = fs.readFileSync(path.join(decoded, "AndroidManifest.xml"), "utf8");
   assert.match(patched, /android:appCategory="game"/);
   assert.match(patched, /android.intent.category.CAR_LAUNCHER/);
-  await exec(java, ["-jar", paths.apksigner, "verify", path.join(unpacked, "com.example.plainapp.apk")]);
-  await exec(java, ["-jar", paths.apksigner, "verify", path.join(unpacked, "config.en.apk")]);
+  assert.doesNotMatch(patched, /requiredSplitTypes|isSplitRequired|com\.android\.vending\.splits/);
+  await exec(java, ["-jar", paths.apksigner, "verify", output]);
 });

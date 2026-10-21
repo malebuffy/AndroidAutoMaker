@@ -1,19 +1,21 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import express from "express";
 import multer from "multer";
 import { runPipeline, STEPS } from "./lib/pipeline.js";
 import { assertTools, findJava, paths } from "./lib/tools.js";
+import { installApkOnDevice } from "./lib/deviceInstall.js";
+// import { installXapkOnDevice } from "./lib/deviceInstall.js";
 import { runXapkPipeline } from "./lib/xapk.js";
 
 const PORT = Number(process.env.PORT) || 4173;
-const MAX_BYTES = 512 * 1024 * 1024;
+const HOST = process.env.HOST || "0.0.0.0";
 const JOB_TTL_MS = 60 * 60 * 1000;
 const ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const jobs = new Map();
-let activeJobId = null;
 
 function publicJob(job) {
   return {
@@ -25,7 +27,9 @@ function publicJob(job) {
       label: step.label,
       state: stepState(job, step.id),
     })),
-    log: job.log.slice(-80),
+    kind: "game",
+    // kind: job.kind === "navigation" ? "navigation" : "game",
+    log: [],
     error: job.error,
     changes: job.changes,
     packageName: job.packageName,
@@ -48,9 +52,8 @@ function stepState(job, id) {
 function safeDownloadName(originalName) {
   const base = path.basename(originalName || "app.apk").replace(/[^a-zA-Z0-9._-]+/g, "_");
   const lower = base.toLowerCase();
-  const xapk = lower.endsWith(".xapk");
-  const stem = xapk ? base.slice(0, -5) : lower.endsWith(".apk") ? base.slice(0, -4) : base;
-  return `${stem || "app"}-android-auto.${xapk ? "xapk" : "apk"}`;
+  const stem = lower.endsWith(".xapk") ? base.slice(0, -5) : lower.endsWith(".apk") ? base.slice(0, -4) : base;
+  return `${stem || "app"}-android-auto.apk`;
 }
 
 function contentDisposition(filename) {
@@ -72,7 +75,7 @@ const upload = multer({
       callback(null, xapk ? "input.xapk" : "input.apk");
     },
   }),
-  limits: { fileSize: MAX_BYTES, files: 1 },
+  limits: { files: 1 },
   fileFilter(req, file, callback) {
     const name = (file.originalname || "").toLowerCase();
     if (!name.endsWith(".apk") && !name.endsWith(".xapk")) {
@@ -83,7 +86,7 @@ const upload = multer({
   },
 });
 
-function startJob(id, originalName) {
+function startJob(id, originalName, kind) {
   const directory = path.join(paths.work, id);
   const xapk = (originalName || "").toLowerCase().endsWith(".xapk");
   const inputPath = path.join(directory, xapk ? "input.xapk" : "input.apk");
@@ -108,19 +111,21 @@ function startJob(id, originalName) {
     packageName: "",
     downloadName: safeDownloadName(originalName),
     originalName: path.basename(originalName || "app.apk"),
-    format: xapk ? "xapk" : "apk",
+    format: "apk",
+    kind: "game",
+    // kind: kind === "navigation" ? "navigation" : "game",
     size: 0,
     createdAt: Date.now(),
-    outputPath: path.join(directory, xapk ? "signed.xapk" : "signed.apk"),
+    outputPath: path.join(directory, "signed.apk"),
   };
   jobs.set(id, job);
-  activeJobId = id;
 
   const convert = xapk ? runXapkPipeline : runPipeline;
   convert({
     inputPath,
     outputPath: job.outputPath,
     log: job.log,
+    kind: job.kind,
     onStep(step) {
       job.step = step;
     },
@@ -136,13 +141,8 @@ function startJob(id, originalName) {
     })
     .catch((error) => {
       job.status = "error";
-      job.error = error.toolOutput
-        ? `${error.message}\n${error.toolOutput}`.trim()
-        : error.message || "The package could not be converted.";
+      job.error = "This package could not be converted.";
       job.log.push(job.error);
-    })
-    .finally(() => {
-      if (activeJobId === id) activeJobId = null;
     });
 
   return job;
@@ -171,21 +171,17 @@ app.get("/api/health", (req, res) => {
 });
 
 app.post("/api/jobs", (req, res) => {
-  if (activeJobId) {
-    res.status(409).json({ error: "Another package is being converted. Wait for it to finish." });
-    return;
-  }
   upload.single("apk")(req, res, (error) => {
     if (error) {
       res.status(400).json({ error: error.message || "Upload failed." });
       return;
     }
     if (!req.file) {
-      res.status(400).json({ error: "Choose an APK or XAPK to upload." });
+      res.status(400).json({ error: "Choose an APK to upload." });
       return;
     }
     try {
-      const job = startJob(req.jobId, req.file.originalname);
+      const job = startJob(req.jobId, req.file.originalname, req.body?.kind);
       res.status(202).json(publicJob(job));
     } catch (startError) {
       res.status(startError.status || 500).json({ error: startError.message });
@@ -216,21 +212,78 @@ app.get("/api/jobs/:id/download", (req, res) => {
     res.status(404).json({ error: "The signed package is not ready." });
     return;
   }
-  const xapk = job.downloadName.toLowerCase().endsWith(".xapk");
-  res.setHeader("Content-Type", xapk ? "application/zip" : "application/vnd.android.package-archive");
+  // const xapk = job.downloadName.toLowerCase().endsWith(".xapk");
+  const outputPath = job.outputPath;
+  const sessionId = job.id;
+  res.setHeader("Content-Type", "application/vnd.android.package-archive");
   res.setHeader("Content-Disposition", contentDisposition(job.downloadName));
   res.setHeader("Cache-Control", "no-store");
-  res.sendFile(job.outputPath);
+  res.sendFile(outputPath, (error) => {
+    if (error) return;
+    removeSession(sessionId);
+  });
 });
+
+app.post("/api/jobs/:id/install", async (req, res) => {
+  if (!ID_PATTERN.test(req.params.id)) {
+    res.status(404).json({ error: "Job not found." });
+    return;
+  }
+  const job = jobs.get(req.params.id);
+  if (!job || job.status !== "done" || !fs.existsSync(job.outputPath)) {
+    res.status(404).json({ error: "The signed package is not ready." });
+    return;
+  }
+  try {
+    if (job.format === "xapk") {
+      res.status(400).json({ error: "Choose an APK to upload." });
+      return;
+    }
+    // const result = job.format === "xapk"
+    //   ? await installXapkOnDevice(job.outputPath, `automaker-${job.id}`, job.packageName)
+    //   : await installApkOnDevice(job.outputPath, `automaker-${job.id}.apk`, job.packageName);
+    const result = await installApkOnDevice(job.outputPath, `automaker-${job.id}.apk`, job.packageName);
+    if (!result.installed) {
+      res.status(500).json({ error: "The app was not installed." });
+      return;
+    }
+    res.json({
+      installed: true,
+      message: "Installed on the phone. The download is still available.",
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.toolOutput || error.message || "The phone installer could not be opened." });
+  }
+});
+
+function removeSession(id, attempt = 0) {
+  const directory = path.resolve(paths.work, id);
+  const root = path.resolve(paths.work);
+  if (directory !== root && !directory.startsWith(`${root}${path.sep}`)) return;
+  jobs.delete(id);
+  fs.rm(directory, { recursive: true, force: true }, (error) => {
+    if (error && attempt < 8) setTimeout(() => removeSession(id, attempt + 1), 250);
+  });
+}
+
+function shareUrls(port) {
+  const urls = [`http://127.0.0.1:${port}`];
+  for (const entries of Object.values(os.networkInterfaces())) {
+    for (const entry of entries || []) {
+      if (entry.family === "IPv4" && !entry.internal) urls.push(`http://${entry.address}:${port}`);
+    }
+  }
+  return urls;
+}
 
 setInterval(purgeOldJobs, 10 * 60 * 1000).unref();
 
-const server = app.listen(PORT, "127.0.0.1", () => {
+const server = app.listen(PORT, HOST, () => {
   try {
     const java = findJava();
     assertTools();
-    console.log(`Android Auto Maker is running at http://127.0.0.1:${PORT}`);
-    console.log(`Java ${java.major} · apktool 3.0.3 · apksigner · zipalign`);
+    for (const url of shareUrls(PORT)) console.log(`Android Auto Maker is running at ${url}`);
+    console.log(`Java ${java.major} · apktool 3.0.3 · apksigner · zipalign · sessions run together`);
   } catch (error) {
     console.error(error.message);
   }

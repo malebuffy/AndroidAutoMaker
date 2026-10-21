@@ -35,7 +35,7 @@ test("declares a parked game and keeps the edit stable", () => {
   assert.match(first.xml, /<application\b[^>]*android:isGame="true"/);
   assert.doesNotMatch(first.xml, /appCategory="video"/);
   assert.doesNotMatch(first.xml, /isGame="false"/);
-  assert.match(first.xml, /android:required="false"/);
+  assert.match(first.xml, /android.hardware.gamepad"[^>]*android:required="false"/);
   assert.doesNotMatch(first.xml, /android.hardware.type.automotive"[^>]*android:required="true"/);
   assert.equal((first.xml.match(/android.intent.category.CAR_LAUNCHER/g) || []).length, 2);
   assert.match(first.xml, /<activity\b[^>]*android:name="\.Main"[^>]*android:exported="true"/);
@@ -61,4 +61,25 @@ test("adds a car launcher filter when the app has no launcher", () => {
   assert.match(result.xml, /android:appCategory="game"/);
   const again = patchManifest(result.xml);
   assert.equal(again.xml, result.xml);
+});
+
+test("declares navigation the way FS Play does, without marking it as a game", () => {
+  const result = patchManifest(SAMPLE, "navigation");
+  assert.doesNotMatch(result.xml, /android:appCategory="game"/);
+  assert.doesNotMatch(result.xml, /android:isGame="true"/);
+  assert.match(result.xml, /android.intent.category.CAR_LAUNCHER/);
+  assert.match(result.xml, /android.intent.category.APP_MAPS/);
+  assert.match(result.xml, /androidx\.car\.app\.category\.NAVIGATION/);
+  assert.match(result.xml, /android:name="distractionOptimized"[^>]*android:value="true"/);
+  assert.match(result.xml, /androidx\.car\.app\.NAVIGATION_TEMPLATES/);
+  assert.match(result.xml, /androidx\.car\.app\.ACCESS_SURFACE/);
+  assert.match(result.xml, /androidx\.car\.app\.minCarApiLevel"[^>]*android:value="5"/);
+  assert.match(result.xml, /androidx\.car\.app\.CarAppService/);
+  assert.match(result.xml, /com\.automaker\.nav\.NavigationCarService/);
+  assert.match(result.xml, /com\.google\.android\.gms\.car\.application/);
+  assert.match(result.xml, /android.hardware.gamepad"[^>]*android:required="false"/);
+  assert.doesNotMatch(result.xml, /android:name="android\.app\.Activity"/);
+  assert.doesNotMatch(result.xml, /derived\.apk\.id/);
+  const second = patchManifest(result.xml, "navigation");
+  assert.equal(second.xml, result.xml);
 });

@@ -122,4 +122,42 @@ test("round-trips a real APK into a signed parked game", { timeout: 180000 }, as
   assert.match(patched, /android:required="false"/);
   assert.doesNotMatch(patched, /distractionOptimized/);
   assert.doesNotMatch(patched, /derived\.apk\.id/);
+
+  const navigationOutput = path.join(directory, "out", "navigation.apk");
+  const navigation = await runPipeline({
+    inputPath: sample,
+    outputPath: navigationOutput,
+    log: [],
+    kind: "navigation",
+  });
+  assert.equal(navigation.packageName, "com.example.plainapp");
+  const navigationDecoded = path.join(directory, "navigation-check");
+  await exec(java, [
+    "-jar",
+    paths.apktool,
+    "d",
+    "-f",
+    "-s",
+    "-p",
+    paths.framework,
+    "-o",
+    navigationDecoded,
+    navigationOutput,
+  ]);
+  const navigationManifest = fs.readFileSync(path.join(navigationDecoded, "AndroidManifest.xml"), "utf8");
+  const navigationXml = fs.readFileSync(path.join(navigationDecoded, "res", "xml", "automotive_app_desc.xml"), "utf8");
+  assert.match(navigationManifest, /android.intent.category.CAR_LAUNCHER/);
+  assert.match(navigationManifest, /androidx\.car\.app\.category\.NAVIGATION/);
+  assert.match(navigationManifest, /com\.automaker\.nav\.NavigationCarService/);
+  assert.match(navigationManifest, /androidx\.car\.app\.CarAppService/);
+  assert.ok(fs.readFileSync(navigationOutput).includes(Buffer.from("Lcom/automaker/nav/NavigationCarService;")));
+  assert.match(navigationManifest, /androidx\.car\.app\.NAVIGATION_TEMPLATES/);
+  assert.match(navigationManifest, /androidx\.car\.app\.minCarApiLevel/);
+  assert.match(navigationManifest, /com\.google\.android\.gms\.car\.application/);
+  assert.doesNotMatch(navigationManifest, /android:name="android.app.Activity"/);
+  assert.doesNotMatch(navigationManifest, /android:appCategory="game"/);
+  assert.doesNotMatch(navigationManifest, /android:isGame="true"/);
+  for (const name of ["media", "template", "service", "projection"]) {
+    assert.match(navigationXml, new RegExp(`name="${name}"`));
+  }
 });
