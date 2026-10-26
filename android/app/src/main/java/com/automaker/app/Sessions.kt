@@ -13,6 +13,7 @@ import android.net.Uri
 import android.os.Build
 import com.automaker.app.engine.CancelledConversion
 import com.automaker.app.engine.PackageConverter
+import com.automaker.app.engine.SigningKeys
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -68,13 +69,8 @@ class SessionRepository(private val context: Context) {
     private val snapshots = MutableStateFlow<List<SessionSnapshot>>(emptyList())
     val state: StateFlow<List<SessionSnapshot>> = snapshots
     private val converter by lazy {
-        val keystore = File(context.filesDir, "signing.p12")
-        if (!keystore.exists()) {
-            context.assets.open("signing.p12").use { input ->
-                keystore.outputStream().use { input.copyTo(it) }
-            }
-        }
-        PackageConverter(PackageConverter.signerFrom(keystore))
+        val keys = SigningKeys()
+        PackageConverter { packageName -> keys.signerFor(packageName) }
     }
 
     fun restore() {

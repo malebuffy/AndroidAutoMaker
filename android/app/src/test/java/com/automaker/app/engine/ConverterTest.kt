@@ -16,7 +16,7 @@ class ConverterTest {
     private val sdk = File(System.getenv("LOCALAPPDATA"), "Android/Sdk")
     private val java = File("C:/Program Files/Java/jdk-17/bin/java.exe")
     private val project = File("..").canonicalFile.parentFile
-    private val keystore = File("src/main/assets/signing.p12")
+    private val keystore = File("src/test/resources/signing.p12")
 
     @Test(timeout = 180000)
     fun alignsNativeLibrariesTo16Kb() {

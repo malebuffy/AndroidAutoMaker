@@ -27,7 +27,9 @@ data class ConvertedPackage(
     val format: String,
 )
 
-class PackageConverter(private val signer: ApkSigner.SignerConfig) {
+class PackageConverter(private val signerFor: (packageName: String) -> ApkSigner.SignerConfig) {
+    constructor(signer: ApkSigner.SignerConfig) : this({ _ -> signer })
+
     fun convertApk(
         input: File,
         output: File,
@@ -59,7 +61,7 @@ class PackageConverter(private val signer: ApkSigner.SignerConfig) {
             val packageName = manifest.packageName.orEmpty()
             checkCancelled(cancelled)
             onStep("sign")
-            alignAndSign(unsigned, output, log)
+            alignAndSign(unsigned, output, packageName, log)
             unsigned.delete()
             return ConvertedPackage(changes, packageName, output.length(), "apk")
         } finally {
@@ -153,7 +155,8 @@ class PackageConverter(private val signer: ApkSigner.SignerConfig) {
         for (element in found) element.parentElement?.remove(element)
     }
 
-    fun alignAndSign(input: File, output: File, log: (String) -> Unit) {
+    fun alignAndSign(input: File, output: File, packageName: String = "", log: (String) -> Unit) {
+        val signer = signerFor(packageName)
         val aligned = File(output.parentFile, ".aligning-${output.name}")
         try {
             try {

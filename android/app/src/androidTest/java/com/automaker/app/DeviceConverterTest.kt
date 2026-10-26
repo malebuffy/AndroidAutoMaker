@@ -3,6 +3,7 @@ package com.automaker.app
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.automaker.app.engine.PackageConverter
+import com.automaker.app.engine.SigningKeys
 import com.reandroid.apk.ApkModule
 import com.reandroid.arsc.value.ValueType
 import org.junit.Assert.assertEquals
@@ -21,12 +22,9 @@ class DeviceConverterTest {
         instrumentation.context.assets.open("sample.apk").use { source ->
             input.outputStream().use { source.copyTo(it) }
         }
-        val keystore = File(dir, "signing.p12")
-        instrumentation.targetContext.assets.open("signing.p12").use { source ->
-            keystore.outputStream().use { source.copyTo(it) }
-        }
         val output = File(dir, "signed.apk")
-        val result = PackageConverter(PackageConverter.signerFrom(keystore)).convertApk(input, output, {}, {})
+        val keys = SigningKeys()
+        val result = PackageConverter { packageName -> keys.signerFor(packageName) }.convertApk(input, output, {}, {})
         assertEquals("com.example.plainapp", result.packageName)
         assertTrue(result.changes.any { it.contains("game") })
         assertTrue(output.length() > 0)
