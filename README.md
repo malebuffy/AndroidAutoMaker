@@ -50,7 +50,7 @@ npm start
 
 The server listens on port 4173 and prints every address it is sharing, including `http://127.0.0.1:4173` and the address of this PC on the local network. Open one of those in a browser.
 
-On the first start, the site creates a local signing key at `tools/debug.keystore` if that file is missing, and it creates `tools/framework` and `work` for sessions. Leave the process running while people use the page. Stop it with Ctrl+C.
+On the first start, the site creates `tools/framework` and `work` for sessions. The first time an app is prepared, the site creates a random signing key for that app in `tools/keys`, and it uses the same key whenever that app is prepared again, so the new copy installs as an update. Keep `tools/keys` private, and keep it if you want to update apps you already installed. Without its key, an app has to be uninstalled before a new copy can be installed. Leave the process running while people use the page. Stop it with Ctrl+C.
 
 To use another port:
 

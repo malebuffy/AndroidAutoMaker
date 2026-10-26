@@ -6,6 +6,7 @@ tools/zipalign.exe
 tools/apksigner.jar
 tools/car-lib/
 tools/debug.keystore
+tools/keys/
 tools/build-nav/
 tools/merge/
 *.log
