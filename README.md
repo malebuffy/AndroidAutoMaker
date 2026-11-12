@@ -85,7 +85,7 @@ sudo android-auto-maker-setup
 systemctl --user enable --now android-auto-maker.service
 ```
 
-`packaging/aur/` holds the AUR sources (`PKGBUILD`, `.SRCINFO`, service/desktop/setup helper). It tracks the `linux-install` branch until upstream merges it.
+Package page: https://aur.archlinux.org/packages/android-auto-maker-git — `packaging/aur/` holds the AUR sources (`PKGBUILD`, `.SRCINFO`, service/desktop/setup helper). It tracks the `linux-install` branch until upstream merges it.
 
 Prebuilt packages from a checkout:
 
