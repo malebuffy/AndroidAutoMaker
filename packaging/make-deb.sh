@@ -11,9 +11,11 @@ trap 'rm -rf "$STAGE"' EXIT
 PKG="$STAGE/android-auto-maker_${VERSION}_all"
 mkdir -p "$PKG/DEBIAN" "$PKG/opt/android-auto-maker" "$PKG/usr/bin"
 
-# App payload (exclude git, work, keys, SDK downloads, node_modules).
+# App payload (exclude git, work, keys, SDK downloads, SDK-derived binaries, node_modules).
 tar -C "$ROOT" --exclude=.git --exclude=work --exclude=node_modules \
   --exclude=tools/keys --exclude=tools/framework --exclude=.sdk \
+  --exclude=tools/zipalign --exclude=tools/zipalign.exe \
+  --exclude=tools/apksigner.jar --exclude=tools/lib64 \
   --exclude='*.keystore' --exclude='*.p12' -cf - . | tar -xf - -C "$PKG/opt/android-auto-maker"
 
 cat > "$PKG/DEBIAN/control" <<EOF

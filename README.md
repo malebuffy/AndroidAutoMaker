@@ -86,6 +86,13 @@ packaging/make-rpm.sh [version] [out-dir]  # -> dist/*.rpm (needs rpmbuild)
 
 Both wrap the same `/opt/android-auto-maker` layout with a `/usr/bin/android-auto-maker` launcher. Run `install.sh` once afterwards to fetch the SDK `build-tools` (same reason: not redistributable). For an AppImage, bundle the same tree plus a Node binary and JRE with `appimagetool` and an `AppRun` of `node /usr/app/server.js`.
 
+The finished APK stays available for repeat downloads until the job expires an hour after it finishes. Jobs that fail (e.g. **Install on phone** with no device) keep their log on the page so the cause can be read.
+
+### Troubleshooting
+
+- `Missing tools: apksigner, zipalign` — copy `zipalign` and `apksigner.jar` from an SDK `build-tools` folder into `tools`, or run `install.sh` which does it for you. On Linux `install.sh` also stages the SDK `libc++.so` into `tools/lib64`, which `zipalign` needs at runtime.
+- `This package could not be converted` — open **Show log** on the status card; the failing tool command and its output are the last lines. Decode/build failures are usually an `apktool`/`aapt` resource issue with that specific APK; sign failures are usually `zipalign`/`apksigner`/key related.
+
 ## Use the Android app
 
 Install Android Auto Maker on the phone. The maker app itself runs on Android 8.0 or newer. The parked game you prepare still needs Android 15 or newer on the phone that will show it in the car.

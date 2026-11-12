@@ -11,6 +11,8 @@ mkdir -p "$RPMBUILD"/{BUILD,RPMS,SOURCES,SPECS,SRPMS} "$OUT"
 TARBALL="$RPMBUILD/SOURCES/android-auto-maker-$VERSION.tar.gz"
 tar -C "$ROOT" --exclude=.git --exclude=work --exclude=node_modules \
   --exclude=tools/keys --exclude=tools/framework --exclude=.sdk \
+  --exclude=tools/zipalign --exclude=tools/zipalign.exe \
+  --exclude=tools/apksigner.jar --exclude=tools/lib64 \
   --exclude='*.keystore' --exclude='*.p12' \
   --transform "s,^,android-auto-maker-$VERSION/," -czf "$TARBALL" .
 
