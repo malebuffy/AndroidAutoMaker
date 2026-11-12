@@ -79,6 +79,9 @@ fetch_sdk_tools() {
   cp -f "$bt/zipalign" "$PREFIX/tools/zipalign"
   cp -f "$bt/lib/apksigner.jar" "$PREFIX/tools/apksigner.jar"
   chmod +x "$PREFIX/tools/zipalign"
+  # zipalign links libc++.so via $ORIGIN/lib64 RUNPATH - ship the SDK copy next to it.
+  mkdir -p "$PREFIX/tools/lib64"
+  cp -f "$bt/lib64/libc++.so" "$bt/lib64/libc++.so.1" "$PREFIX/tools/lib64/" 2>/dev/null || true
   rm -rf "$tmp"
 }
 
