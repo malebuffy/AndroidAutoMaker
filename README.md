@@ -77,6 +77,16 @@ This installs `nodejs>=18`, `java>=17`, `adb`, downloads the app to `/opt/androi
 
 Env overrides: `REPO=`, `REF=`, `PREFIX=` (e.g. `PREFIX=$HOME/android-auto-maker` for rootless), `PORT=`, `BUILD_TOOLS_VERSION=`.
 
+On Arch Linux, install the `-git` package from the AUR instead (same layout under `/opt/android-auto-maker`):
+
+```bash
+yay -S android-auto-maker-git
+sudo android-auto-maker-setup
+systemctl --user enable --now android-auto-maker.service
+```
+
+`packaging/aur/` holds the AUR sources (`PKGBUILD`, `.SRCINFO`, service/desktop/setup helper). It tracks the `linux-install` branch until upstream merges it.
+
 Prebuilt packages from a checkout:
 
 ```bash
