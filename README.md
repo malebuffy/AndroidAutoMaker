@@ -61,7 +61,30 @@ npm start
 
 **Install on phone** looks for `adb.exe` in `%ANDROID_HOME%\platform-tools`, `%ANDROID_SDK_ROOT%\platform-tools`, or `%LOCALAPPDATA%\Android\Sdk\platform-tools`. Install [Android SDK platform-tools](https://developer.android.com/tools/releases/platform-tools) if that file is not there. On the phone, turn on USB debugging and accept the computer when Android asks.
 
-A missing `apktool.jar`, `apksigner.jar`, or `zipalign.exe` is reported in the server window. Copy `zipalign.exe` and `apksigner.jar` from the Android SDK `build-tools` folder into `tools` before preparing a package.
+A missing `apktool.jar`, `apksigner.jar`, or `zipalign(.exe)` is reported in the server window. Copy `zipalign` and `apksigner.jar` from the Android SDK `build-tools` folder into `tools` before preparing a package.
+
+### Install on Linux (1-liner, .deb, .rpm)
+
+The server also runs on Linux. Java, `adb`, and `aapt` are resolved via `JAVA_HOME`, `ANDROID_HOME`/`ANDROID_SDK_ROOT`, `~/Android/Sdk`, `/opt/android-sdk`, `/usr/bin`, and `PATH` — no Windows-only paths.
+
+Easiest (Debian/Fedora/Arch/openSUSE):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/malebuffy/AndroidAutoMaker/master/install.sh | bash
+```
+
+This installs `nodejs>=18`, `java>=17`, `adb`, downloads the app to `/opt/android-auto-maker`, fetches `build-tools` (`zipalign`, `apksigner.jar`, `aapt`) via Google's commandline tools (SDK license, not bundled here), runs `npm install`, and enables a `systemd --user` service. Open `http://127.0.0.1:4173`.
+
+Env overrides: `REPO=`, `REF=`, `PREFIX=` (e.g. `PREFIX=$HOME/android-auto-maker` for rootless), `PORT=`, `BUILD_TOOLS_VERSION=`.
+
+Prebuilt packages from a checkout:
+
+```bash
+packaging/make-deb.sh [version] [out-dir]  # -> dist/*.deb (Debian/Ubuntu)
+packaging/make-rpm.sh [version] [out-dir]  # -> dist/*.rpm (needs rpmbuild)
+```
+
+Both wrap the same `/opt/android-auto-maker` layout with a `/usr/bin/android-auto-maker` launcher. Run `install.sh` once afterwards to fetch the SDK `build-tools` (same reason: not redistributable). For an AppImage, bundle the same tree plus a Node binary and JRE with `appimagetool` and an `AppRun` of `node /usr/app/server.js`.
 
 ## Use the Android app
 
