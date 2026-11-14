@@ -27,6 +27,7 @@ import rikka.shizuku.Shizuku
 import com.automaker.app.install.AttributedInstaller
 import com.automaker.app.install.BundleInstall
 import com.automaker.app.install.PlayStoreInstall
+import com.automaker.app.install.RootAccess
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.CancellationException
@@ -47,6 +48,8 @@ class PickerModel : ViewModel() {
     var kind: String = "game"
     var renamePackage: Boolean = false
     var gamepad: Boolean = false
+    var useRoot: Boolean = false
+    var rootChecked: Boolean = false
 }
 
 class MainActivity : AppCompatActivity() {
@@ -155,6 +158,11 @@ class MainActivity : AppCompatActivity() {
         binding.gamepad.setOnCheckedChangeListener { _, checked ->
             picker.gamepad = checked
         }
+        binding.useRoot.setOnCheckedChangeListener { _, checked ->
+            picker.useRoot = checked
+            RootAccess.setPreferRoot(this, checked)
+            showRenameNote()
+        }
         showRenameNote()
         binding.convert.setOnClickListener {
             if (picker.kind == "navigation" && (picker.uri != null || picker.installedPackage != null)) askDonation()
@@ -169,10 +177,30 @@ class MainActivity : AppCompatActivity() {
         }
         if (offersNavigation && picker.kind == "navigation") binding.kindNavigation.isChecked = true
         showSelection()
+        detectRootOption()
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 (application as MakerApp).sessions.state.collect { render(it) }
             }
+        }
+    }
+
+    private fun detectRootOption() {
+        lifecycleScope.launch {
+            val rooted = withContext(Dispatchers.IO) { RootAccess.available() }
+            if (!rooted) {
+                binding.useRoot.visibility = View.GONE
+                picker.useRoot = false
+                return@launch
+            }
+            if (!picker.rootChecked) {
+                picker.useRoot = RootAccess.storedPreferRoot(this@MainActivity)
+                picker.rootChecked = true
+            }
+            binding.useRoot.visibility = View.VISIBLE
+            binding.useRoot.isChecked = picker.useRoot
+            RootAccess.setPreferRoot(this@MainActivity, picker.useRoot)
+            showRenameNote()
         }
     }
 
@@ -309,7 +337,13 @@ class MainActivity : AppCompatActivity() {
         binding.installNote.setText(if (sideBySide) R.string.install_note_side else R.string.install_note)
         binding.availabilityTitle.setText(if (navigation) R.string.change_navigation_title else R.string.change_game_title)
         binding.availabilityBody.setText(if (navigation) R.string.change_navigation_body else R.string.change_game_body)
-        binding.availabilityNote.setText(if (navigation) R.string.driving_note else R.string.parked_note)
+        binding.availabilityNote.setText(
+            when {
+                !navigation -> R.string.parked_note
+                picker.useRoot -> R.string.driving_note_root
+                else -> R.string.driving_note
+            },
+        )
     }
 
     private fun showSelection() {

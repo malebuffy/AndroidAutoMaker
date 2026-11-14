@@ -141,7 +141,7 @@ function showRenameNote() {
   const sideBySide = renamePackage.checked;
   const navigation = document.querySelector('input[name="kind"]:checked')?.value === "navigation";
   const availability = navigation
-    ? "The patched app uses Shizuku to open its screen in Android Auto."
+    ? "The patched app uses Shizuku or root to open its screen in Android Auto."
     : "A parked game needs a phone on Android 15 or newer.";
   installWarning.textContent = sideBySide
     ? `The patched package installs next to the original app. ${availability}`

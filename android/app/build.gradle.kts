@@ -11,8 +11,8 @@ android {
         applicationId = "com.automaker.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 17
-        versionName = "1.1.15"
+        versionCode = 19
+        versionName = "1.1.17"
         multiDexEnabled = true
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

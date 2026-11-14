@@ -726,12 +726,17 @@ public class NavigationCarService extends CarAppService {
                 @Override
                 public void run() {
                     try {
+                        if (rootAvailable()) {
+                            Log.i("AutoMakerNav", "Opening with root");
+                            runShell();
+                            return;
+                        }
                         long deadline = SystemClock.uptimeMillis() + 2000;
                         while (!Shizuku.pingBinder() && SystemClock.uptimeMillis() < deadline) {
                             Thread.sleep(100);
                         }
                         if (!Shizuku.pingBinder()) {
-                            Log.i("AutoMakerNav", "Shizuku is not running");
+                            Log.i("AutoMakerNav", "Shizuku is not running and root is not available");
                             return;
                         }
                         if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
@@ -745,10 +750,10 @@ public class NavigationCarService extends CarAppService {
                         }
                         runShell();
                     } catch (Throwable error) {
-                        Log.i("AutoMakerNav", "Shizuku could not open the patched app", error);
+                        Log.i("AutoMakerNav", "Could not open the patched app", error);
                     }
                 }
-            }, "AutoMakerShizuku").start();
+            }, "AutoMakerLaunch").start();
         }
 
         private void requestShizuku() {
@@ -773,7 +778,7 @@ public class NavigationCarService extends CarAppService {
                                 Log.i("AutoMakerNav", "Shizuku could not open the patched app", error);
                             }
                         }
-                    }, "AutoMakerShizuku").start();
+                    }, "AutoMakerLaunch").start();
                 }
             });
             Shizuku.requestPermission(5001);
@@ -797,7 +802,7 @@ public class NavigationCarService extends CarAppService {
                     }
                 });
             }
-            Log.i("AutoMakerNav", "Shizuku launch: " + output + " task " + task + " " + moved);
+            Log.i("AutoMakerNav", "Privileged launch: " + output + " task " + task + " " + moved);
             carDisplay = carDisplay(shell("dumpsys window windows"), surfaceWidth, surfaceHeight);
             enableTouchBridge(appPackage);
             Log.i("AutoMakerNav", "Car touch display " + carDisplay);
@@ -861,7 +866,7 @@ public class NavigationCarService extends CarAppService {
         private static void disableTouchBridge(String packageName) {
             if (packageName == null || packageName.length() == 0) return;
             try {
-                if (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) return;
+                if (!privilegedReady()) return;
                 String component = packageName + "/" + TouchBridge.NAME;
                 String current = safeSetting(shell("settings get secure enabled_accessibility_services"));
                 if (!current.contains(component)) return;
@@ -922,10 +927,40 @@ public class NavigationCarService extends CarAppService {
             return command("sh", "-c", commandText);
         }
 
+        private static volatile Boolean rootReady;
+
+        private static boolean rootAvailable() {
+            Boolean cached = rootReady;
+            if (cached != null) return cached;
+            boolean found = false;
+            try {
+                Process process = Runtime.getRuntime().exec(new String[]{"su", "-c", "id"});
+                String output = read(process.getInputStream());
+                String errors = read(process.getErrorStream());
+                int code = process.waitFor();
+                found = code == 0 && (output + "\n" + errors).contains("uid=0");
+            } catch (Throwable ignored) {
+                found = false;
+            }
+            rootReady = found;
+            if (found) Log.i("AutoMakerNav", "Root is available");
+            return found;
+        }
+
+        private static boolean shizukuReady() {
+            try {
+                return Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED;
+            } catch (Throwable ignored) {
+                return false;
+            }
+        }
+
+        private static boolean privilegedReady() {
+            return rootAvailable() || shizukuReady();
+        }
+
         private static String command(String... args) throws Exception {
-            Method method = Shizuku.class.getDeclaredMethod("newProcess", String[].class, String[].class, String.class);
-            method.setAccessible(true);
-            Process process = (Process) method.invoke(null, (Object) args, null, null);
+            Process process = rootAvailable() ? rootProcess(args) : shizukuProcess(args);
             StringBuilder errors = new StringBuilder();
             Thread error = new Thread(new Runnable() {
                 @Override
@@ -938,6 +973,36 @@ public class NavigationCarService extends CarAppService {
             error.join();
             process.waitFor();
             return (output + "\n" + errors).trim();
+        }
+
+        private static Process shizukuProcess(String... args) throws Exception {
+            Method method = Shizuku.class.getDeclaredMethod("newProcess", String[].class, String[].class, String.class);
+            method.setAccessible(true);
+            return (Process) method.invoke(null, (Object) args, null, null);
+        }
+
+        private static Process rootProcess(String... args) throws Exception {
+            StringBuilder joined = new StringBuilder();
+            for (String arg : args) {
+                if (joined.length() > 0) joined.append(' ');
+                joined.append(shellQuote(arg));
+            }
+            return Runtime.getRuntime().exec(new String[]{"su", "-c", joined.toString()});
+        }
+
+        private static String shellQuote(String value) {
+            if (value == null) return "''";
+            if (value.length() == 0) return "''";
+            boolean plain = true;
+            for (int i = 0; i < value.length(); i++) {
+                char c = value.charAt(i);
+                if (Character.isWhitespace(c) || "'\"\\$`;&|()<>".indexOf(c) >= 0) {
+                    plain = false;
+                    break;
+                }
+            }
+            if (plain) return value;
+            return "'" + value.replace("'", "'\\''") + "'";
         }
 
         private static String read(InputStream stream) {
@@ -1342,8 +1407,8 @@ public class NavigationCarService extends CarAppService {
                 @Override
                 public void run() {
                     try {
-                        if (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
-                            Log.i("AutoMakerNav", "Touch was not delivered because Shizuku is not allowed");
+                        if (!privilegedReady()) {
+                            Log.i("AutoMakerNav", "Touch was not delivered because root and Shizuku are not allowed");
                             return;
                         }
                         String output = shell(command);
