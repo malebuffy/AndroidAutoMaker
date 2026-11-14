@@ -360,13 +360,12 @@ app.get("/api/jobs/:id/download", (req, res) => {
   }
   // const xapk = job.downloadName.toLowerCase().endsWith(".xapk");
   const outputPath = job.outputPath;
-  const sessionId = job.id;
   res.setHeader("Content-Type", "application/vnd.android.package-archive");
   res.setHeader("Content-Disposition", contentDisposition(job.downloadName));
   res.setHeader("Cache-Control", "no-store");
   res.sendFile(outputPath, (error) => {
-    if (error) return;
-    removeSession(sessionId);
+    // Keep the finished package so it can be downloaded more than once.
+    // Expired jobs are removed by purgeOldJobs after JOB_TTL_MS.
   });
 });
 
@@ -413,16 +412,6 @@ function kindFrom(value) {
 
 function flagFrom(value) {
   return value === true || value === "true" || value === "1" || value === "on";
-}
-
-function removeSession(id, attempt = 0) {
-  const directory = path.resolve(paths.work, id);
-  const root = path.resolve(paths.work);
-  if (directory !== root && !directory.startsWith(`${root}${path.sep}`)) return;
-  jobs.delete(id);
-  fs.rm(directory, { recursive: true, force: true }, (error) => {
-    if (error && attempt < 8) setTimeout(() => removeSession(id, attempt + 1), 250);
-  });
 }
 
 function shareUrls(port) {

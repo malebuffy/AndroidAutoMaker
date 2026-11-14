@@ -3,6 +3,8 @@ work/
 tests/
 tools/framework/
 tools/zipalign.exe
+tools/zipalign
+tools/lib64/
 tools/apksigner.jar
 tools/car-lib/
 tools/debug.keystore

@@ -61,7 +61,47 @@ npm start
 
 **Install on phone** looks for `adb.exe` in `%ANDROID_HOME%\platform-tools`, `%ANDROID_SDK_ROOT%\platform-tools`, or `%LOCALAPPDATA%\Android\Sdk\platform-tools`. Install [Android SDK platform-tools](https://developer.android.com/tools/releases/platform-tools) if that file is not there. On the phone, turn on USB debugging and accept the computer when Android asks.
 
-A missing `apktool.jar`, `apksigner.jar`, or `zipalign.exe` is reported in the server window. Copy `zipalign.exe` and `apksigner.jar` from the Android SDK `build-tools` folder into `tools` before preparing a package.
+A missing `apktool.jar`, `apksigner.jar`, or `zipalign(.exe)` is reported in the server window. Copy `zipalign` and `apksigner.jar` from the Android SDK `build-tools` folder into `tools` before preparing a package.
+
+### Install on Linux (1-liner, .deb, .rpm)
+
+The server also runs on Linux. Java, `adb`, and `aapt` are resolved via `JAVA_HOME`, `ANDROID_HOME`/`ANDROID_SDK_ROOT`, `~/Android/Sdk`, `/opt/android-sdk`, `/usr/bin`, and `PATH` — no Windows-only paths.
+
+Easiest (Debian/Fedora/Arch/openSUSE):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/malebuffy/AndroidAutoMaker/master/install.sh | bash
+```
+
+This installs `nodejs>=18`, `java>=17`, `adb`, downloads the app to `/opt/android-auto-maker`, fetches `build-tools` (`zipalign`, `apksigner.jar`, `aapt`) via Google's commandline tools (SDK license, not bundled here), runs `npm install`, and enables a `systemd --user` service. Open `http://127.0.0.1:4173`.
+
+Env overrides: `REPO=`, `REF=`, `PREFIX=` (e.g. `PREFIX=$HOME/android-auto-maker` for rootless), `PORT=`, `BUILD_TOOLS_VERSION=`.
+
+On Arch Linux, install the `-git` package from the AUR instead (same layout under `/opt/android-auto-maker`):
+
+```bash
+yay -S android-auto-maker-git
+sudo android-auto-maker-setup
+systemctl --user enable --now android-auto-maker.service
+```
+
+Package page: https://aur.archlinux.org/packages/android-auto-maker-git — `packaging/aur/` holds the AUR sources (`PKGBUILD`, `.SRCINFO`, service/desktop/setup helper). It tracks the `linux-install` branch until upstream merges it.
+
+Prebuilt packages from a checkout:
+
+```bash
+packaging/make-deb.sh [version] [out-dir]  # -> dist/*.deb (Debian/Ubuntu)
+packaging/make-rpm.sh [version] [out-dir]  # -> dist/*.rpm (needs rpmbuild)
+```
+
+Both wrap the same `/opt/android-auto-maker` layout with a `/usr/bin/android-auto-maker` launcher. Run `install.sh` once afterwards to fetch the SDK `build-tools` (same reason: not redistributable). For an AppImage, bundle the same tree plus a Node binary and JRE with `appimagetool` and an `AppRun` of `node /usr/app/server.js`.
+
+The finished APK stays available for repeat downloads until the job expires an hour after it finishes. Jobs that fail (e.g. **Install on phone** with no device) keep their log on the page so the cause can be read.
+
+### Troubleshooting
+
+- `Missing tools: apksigner, zipalign` — copy `zipalign` and `apksigner.jar` from an SDK `build-tools` folder into `tools`, or run `install.sh` which does it for you. On Linux `install.sh` also stages the SDK `libc++.so` into `tools/lib64`, which `zipalign` needs at runtime.
+- `This package could not be converted` — open **Show log** on the status card; the failing tool command and its output are the last lines. Decode/build failures are usually an `apktool`/`aapt` resource issue with that specific APK; sign failures are usually `zipalign`/`apksigner`/key related.
 
 ## Use the Android app
 
