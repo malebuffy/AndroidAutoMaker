@@ -1,6 +1,6 @@
 # Android Auto Maker
 
-Put an ordinary Android app on the car screen while the car is parked.
+Put an ordinary Android app on the car screen while the car is parked or moving.
 
 Android Auto Maker takes an APK or an XAPK and prepares a single APK that Android Auto can offer as a parked game. The app's own screen stays available while the car is parked. You can save that APK, or install it on the phone from the website or from the Android Auto Maker app.
 

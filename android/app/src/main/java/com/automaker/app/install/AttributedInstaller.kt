@@ -22,7 +22,12 @@ class AttributedInstaller(private val context: Context) {
         }
     }
 
+    fun rootReady(): Boolean = RootAccess.preferRoot(context)
+
+    fun privilegedReady(): Boolean = rootReady() || shizukuReady()
+
     fun requestPermission(): Boolean {
+        if (rootReady()) return false
         if (!shizukuInstalled()) return false
         return try {
             if (!Shizuku.pingBinder()) return false
@@ -35,7 +40,7 @@ class AttributedInstaller(private val context: Context) {
     }
 
     fun setPlayInstaller(packageName: String): Boolean {
-        if (!shizukuReady() || !PACKAGE_NAME.matches(packageName)) return false
+        if (!privilegedReady() || !PACKAGE_NAME.matches(packageName)) return false
         val commands = listOf(
             "cmd package set-installer-package --user 0 $packageName ${PlayStoreInstall.VENDING_PACKAGE}",
             "cmd package set-installer --user 0 $packageName ${PlayStoreInstall.VENDING_PACKAGE}",
@@ -47,6 +52,14 @@ class AttributedInstaller(private val context: Context) {
     }
 
     fun openAsShell(file: File): Boolean {
+        if (rootReady()) {
+            return try {
+                installWithRoot(file)
+            } catch (error: Throwable) {
+                Log.e(TAG, "Could not install with root", error)
+                false
+            }
+        }
         if (!shizukuReady()) return false
         return try {
             val intent = PlayStoreInstall.createShellInstallIntent(context, file)
@@ -58,7 +71,7 @@ class AttributedInstaller(private val context: Context) {
     }
 
     fun installBundle(apks: List<File>, obbs: List<com.automaker.app.engine.XapkPackages.ObbFile>): Boolean {
-        if (!shizukuReady() || apks.isEmpty()) return false
+        if (!privilegedReady() || apks.isEmpty()) return false
         val id = java.util.UUID.randomUUID().toString()
         val remotes = ArrayList<String>()
         var sessionId: Int? = null
@@ -91,7 +104,7 @@ class AttributedInstaller(private val context: Context) {
     fun installSidecars(root: File) {
         val files = Sidecars.files(root)
         if (files.isEmpty()) return
-        if (shizukuReady()) {
+        if (privilegedReady()) {
             for ((file, relative) in files) {
                 val remote = "/sdcard/$relative"
                 require(remote.startsWith("/sdcard/Android/") && !remote.contains("..") && !remote.contains("'"))
@@ -110,12 +123,24 @@ class AttributedInstaller(private val context: Context) {
     }
 
     fun copyObbs(obbs: List<com.automaker.app.engine.XapkPackages.ObbFile>) {
-        if (!shizukuReady()) return
+        if (!privilegedReady()) return
         for (obb in obbs) {
             val remoteDir = "/sdcard/Android/obb/${obb.packageName}"
             val remote = "$remoteDir/${obb.name}"
             shell("mkdir -p $remoteDir")
             copyToRemote(obb.file, remote)
+        }
+    }
+
+    private fun installWithRoot(file: File): Boolean {
+        val id = java.util.UUID.randomUUID().toString()
+        val remote = "/data/local/tmp/automaker-root-$id.apk"
+        return try {
+            copyToRemote(file, remote)
+            shell("pm install -r -i ${PlayStoreInstall.VENDING_PACKAGE} $remote")
+            true
+        } finally {
+            runCatching { shell("rm -f $remote") }
         }
     }
 
@@ -191,6 +216,7 @@ class AttributedInstaller(private val context: Context) {
     }
 
     private fun remoteProcess(command: Array<String>): Process {
+        if (rootReady()) return rootProcess(command)
         val method = Shizuku::class.java.getDeclaredMethod(
             "newProcess",
             Array<String>::class.java,
@@ -199,6 +225,17 @@ class AttributedInstaller(private val context: Context) {
         )
         method.isAccessible = true
         return method.invoke(null, command, null, null) as Process
+    }
+
+    private fun rootProcess(command: Array<String>): Process {
+        val joined = command.joinToString(" ") { arg ->
+            if (arg.isEmpty() || arg.any { it.isWhitespace() || "'\"\\$`;&|()<>".indexOf(it) >= 0 }) {
+                "'" + arg.replace("'", "'\\''") + "'"
+            } else {
+                arg
+            }
+        }
+        return Runtime.getRuntime().exec(arrayOf("su", "-c", joined))
     }
 
     private fun shizukuInstalled(): Boolean = try {
@@ -213,6 +250,6 @@ class AttributedInstaller(private val context: Context) {
         private const val TAG = "AttributedInstaller"
         const val SHIZUKU_REQUEST = 5001
         private val PACKAGE_NAME = Regex("^[A-Za-z][A-Za-z0-9_]*(?:\\.[A-Za-z0-9_]+)+$")
-        private val REMOTE_PATH = Regex("^/(?:data/local/tmp/automaker-[0-9a-fA-F-]+-\\d+\\.apk|sdcard/Android/obb/[A-Za-z][A-Za-z0-9_]*(?:\\.[A-Za-z0-9_]+)+/[A-Za-z0-9._-]+)$")
+        private val REMOTE_PATH = Regex("^/(?:data/local/tmp/automaker-(?:root-)?[0-9a-fA-F-]+(?:-\\d+)?\\.apk|sdcard/Android/obb/[A-Za-z][A-Za-z0-9_]*(?:\\.[A-Za-z0-9_]+)+/[A-Za-z0-9._-]+)$")
     }
 }
