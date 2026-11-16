@@ -141,14 +141,16 @@ function showRenameNote() {
   const sideBySide = renamePackage.checked;
   const navigation = document.querySelector('input[name="kind"]:checked')?.value === "navigation";
   const availability = navigation
-    ? "The patched app uses Shizuku or root to open its screen in Android Auto."
-    : "A parked game needs a phone on Android 15 or newer.";
+    ? "Navigation needs Shizuku or root on the phone. Nothing is installed on the car."
+    : "A parked game needs a phone on Android 15 or newer. No Shizuku needed.";
   installWarning.textContent = sideBySide
     ? `The patched package installs next to the original app. ${availability}`
     : `Uninstall the original app first. ${availability}`;
   installNote.textContent = sideBySide
     ? "The patched package can stay installed beside the original."
     : "Uninstall the original app first.";
+  const shizukuHelp = document.querySelector("#shizuku-help");
+  if (shizukuHelp) shizukuHelp.hidden = !navigation;
 }
 
 renamePackage.addEventListener("change", showRenameNote);

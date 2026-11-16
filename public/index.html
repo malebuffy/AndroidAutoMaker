@@ -8,12 +8,12 @@
       name="description"
       content="Turn an APK or XAPK into a package for Android Auto."
     />
-    <meta name="theme-color" content="#006a61" />
+    <meta name="theme-color" content="#050807" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
@@ -29,20 +29,21 @@
             />
           </svg>
         </span>
-        <span class="brand">Android Auto Maker</span>
-        <span class="badge">Shared on this network</span>
+        <span class="brand">Android Auto Maker<span class="cursor" aria-hidden="true">_</span></span>
+        <span class="badge">LAN SHARED // :4173</span>
       </div>
     </header>
 
     <main>
       <div class="intro">
+        <p class="kicker">&gt; PATCH // BUILD // DEPLOY</p>
         <h1>Show an app on Android Auto</h1>
         <p>Upload an APK or XAPK, or choose an installed app, then download or install the result.</p>
       </div>
 
       <div class="layout">
         <section class="card" aria-labelledby="upload-title">
-          <h2 id="upload-title">APK or XAPK</h2>
+          <h2 id="upload-title"><span class="hacker-num">01</span> // INPUT: APK or XAPK</h2>
           <label id="dropzone" class="dropzone" for="file">
             <input id="file" type="file" />
             <span class="drop-icon" aria-hidden="true">
@@ -92,7 +93,7 @@
               <input type="radio" name="kind" value="navigation" />
               <span>
                 <strong>Navigation (Shizuku or root)</strong>
-                <span class="support">The patched app uses Shizuku or root to open its screen in Android Auto.</span>
+                <span class="support">The patched app uses Shizuku or root on the phone to open its screen in Android Auto. Parked games do not need it.</span>
               </span>
             </label>
           </fieldset>
@@ -113,8 +114,27 @@
         </section>
 
         <section class="card" aria-labelledby="changes-title">
-          <h2 id="changes-title">Before you install</h2>
+          <h2 id="changes-title"><span class="hacker-num">02</span> // BRIEFING</h2>
           <p id="install-warning" class="note">Uninstall the original app first. A parked game needs a phone on Android 15 or newer.</p>
+          <div id="shizuku-help" hidden>
+            <h3 class="shizuku-title">Navigation needs Shizuku or root (phone only)</h3>
+            <p class="support">
+              Shizuku is a helper app that gives the patched app permission to run system commands
+              that Android normally blocks. A rooted phone can do the same without Shizuku. The patched app uses it to place its own screen on the
+              car display. Install Shizuku on the phone only. Nothing is installed on the car.
+            </p>
+            <ol class="shizuku-steps">
+              <li>Install the Shizuku app (<code>moe.shizuku.privileged.api</code>) on the phone. Get it from
+                <a href="https://play.google.com/store/apps/details?id=moe.shizuku.privileged.api" target="_blank" rel="noopener">Google Play</a>,
+                <a href="https://github.com/RikkaApps/Shizuku/releases" target="_blank" rel="noopener">GitHub releases</a>,
+                or <a href="https://shizuku.rikka.app/download/" target="_blank" rel="noopener">shizuku.rikka.app/download</a>.
+                Setup guide: <a href="https://shizuku.rikka.app/guide/setup/" target="_blank" rel="noopener">shizuku.rikka.app/guide/setup</a>.</li>
+              <li>Start Shizuku with Wireless Debugging or ADB, then leave it running. Skip this if the phone is rooted.</li>
+              <li>Install the Navigation package from this page, open it in Android Auto, and tap Allow if it asks for Shizuku.</li>
+              <li>If the car screen stays on the icon, Shizuku is stopped, root is unavailable, or permission was denied.</li>
+            </ol>
+            <p class="support">Parked games do not need Shizuku.</p>
+          </div>
         </section>
       </div>
 
@@ -146,7 +166,36 @@
     </main>
 
     <footer>
-      <span id="tools">Checking tools…</span>
+      <div class="footer-inner">
+        <div class="footer-row">
+          <strong>Android Auto Maker</strong>
+          <span class="footer-sep" aria-hidden="true">·</span>
+          <span id="tools">Checking tools…</span>
+        </div>
+        <div class="footer-row">
+          Contributors:
+          <a href="https://github.com/malebuffy" target="_blank" rel="noopener">malebuffy</a>
+          (original app),
+          <a href="https://github.com/9M2PJU" target="_blank" rel="noopener">9M2PJU</a>
+          (Linux install and packaging).
+          <a href="https://github.com/9M2PJU/AndroidAutoMaker" target="_blank" rel="noopener">Source</a>
+          <span class="footer-sep" aria-hidden="true">·</span>
+          <a href="https://github.com/9M2PJU/AndroidAutoMaker/blob/master/LICENSE" target="_blank" rel="noopener">GPL-3.0-only</a>
+        </div>
+        <div class="footer-row">
+          Built with
+          <a href="https://ibotpeaches.github.io/Apktool/" target="_blank" rel="noopener">Apktool</a>
+          (Apache-2.0),
+          <a href="https://github.com/REAndroid/ARSCLib" target="_blank" rel="noopener">ARSCLib</a>
+          (Apache-2.0),
+          <a href="https://shizuku.rikka.app/" target="_blank" rel="noopener">Shizuku</a>,
+          and Android SDK build-tools from Google (not bundled).
+        </div>
+        <div class="footer-row fine">
+          Independent project. Not affiliated with, endorsed by, or sponsored by Google LLC.
+          Android, Android Auto, and Google Play are trademarks of Google LLC.
+        </div>
+      </div>
     </footer>
     <div id="app-picker" class="app-picker" hidden>
       <div class="app-picker-card">
